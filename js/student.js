@@ -4,11 +4,19 @@ const studentRoot =
     );
 
 
+/* --------------------------------
+   Polling
+-------------------------------- */
+
+const POLL_INTERVAL = 3000;
+
 let lastStudentIndex = -1;
 
-let currentAnswer = null;
-
 let polling = false;
+
+let pollingStopped = false;
+
+let currentAnswer = null;
 
 
 /* --------------------------------
@@ -27,6 +35,86 @@ function escapeHTML(value) {
 
 
 /* --------------------------------
+   Local student data
+-------------------------------- */
+
+function getStudentName() {
+
+    return localStorage.getItem(
+        "lectureStudentName"
+    ) || "";
+}
+
+
+function saveStudentName(name) {
+
+    localStorage.setItem(
+        "lectureStudentName",
+        name
+    );
+}
+
+
+/*
+    학생 본인의 답변만
+    자기 브라우저에 기억.
+
+    실제 강의 데이터는 D1이 기준.
+*/
+
+function getMyAnswers() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(
+                "lectureMyAnswers"
+            ) || "{}"
+        );
+
+    } catch {
+
+        return {};
+
+    }
+}
+
+
+function getMyAnswer(questionId) {
+
+    const answers =
+        getMyAnswers();
+
+    return answers[questionId] || null;
+}
+
+
+function saveMyAnswer(
+    questionId,
+    name,
+    answer
+) {
+
+    const answers =
+        getMyAnswers();
+
+
+    answers[questionId] = {
+        name,
+        answer
+    };
+
+
+    localStorage.setItem(
+        "lectureMyAnswers",
+        JSON.stringify(
+            answers
+        )
+    );
+}
+
+
+/* --------------------------------
    API
 -------------------------------- */
 
@@ -40,6 +128,7 @@ async function getLectureState() {
             }
         );
 
+
     if (!response.ok) {
 
         throw new Error(
@@ -48,29 +137,6 @@ async function getLectureState() {
 
     }
 
-    return response.json();
-}
-
-
-async function getQuestionAnswers(
-    questionId
-) {
-
-    const response =
-        await fetch(
-            `/api/answers?questionId=${encodeURIComponent(questionId)}`,
-            {
-                cache: "no-store"
-            }
-        );
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Failed to load answers"
-        );
-
-    }
 
     return response.json();
 }
@@ -111,7 +177,38 @@ async function submitAnswer(
 
     }
 
+
     return response.json();
+}
+
+
+/* --------------------------------
+   Ended screen
+-------------------------------- */
+
+function renderEndedPage() {
+
+    studentRoot.innerHTML = `
+        <section class="student-shell">
+
+            <div class="student-card waiting-card">
+
+                <div class="student-eyebrow">
+                    강의 종료
+                </div>
+
+                <h1>
+                    강의가 종료되었습니다.
+                </h1>
+
+                <p>
+                    참여해 주셔서 감사합니다.
+                </p>
+
+            </div>
+
+        </section>
+    `;
 }
 
 
@@ -119,18 +216,39 @@ async function submitAnswer(
    Student page
 -------------------------------- */
 
-async function renderStudentPage() {
-
-    let state;
+async function renderStudentPage(
+    state = null
+) {
 
     try {
 
-        state =
-            await getLectureState();
+        if (!state) {
+
+            state =
+                await getLectureState();
+
+        }
 
     } catch (error) {
 
         console.error(error);
+
+        return;
+    }
+
+
+    /*
+        강의 종료
+    */
+
+    if (
+        state.status ===
+        "ended"
+    ) {
+
+        pollingStopped = true;
+
+        renderEndedPage();
 
         return;
     }
@@ -158,7 +276,7 @@ async function renderStudentPage() {
 
 
     /*
-        발표 슬라이드
+        일반 발표 슬라이드
     */
 
     if (
@@ -167,6 +285,7 @@ async function renderStudentPage() {
     ) {
 
         currentAnswer = null;
+
 
         studentRoot.innerHTML = `
             <section class="student-shell">
@@ -191,6 +310,7 @@ async function renderStudentPage() {
             </section>
         `;
 
+
         return;
     }
 
@@ -200,35 +320,13 @@ async function renderStudentPage() {
     */
 
     const savedName =
-        localStorage.getItem(
-            "lectureStudentName"
-        ) || "";
-
-
-    let answers = [];
-
-    try {
-
-        answers =
-            await getQuestionAnswers(
-                slide.id
-            );
-
-    } catch (error) {
-
-        console.error(error);
-
-    }
+        getStudentName();
 
 
     currentAnswer =
-        savedName
-            ? answers.find(
-                answer =>
-                    answer.name ===
-                    savedName
-            ) || null
-            : null;
+        getMyAnswer(
+            slide.id
+        );
 
 
     studentRoot.innerHTML = `
@@ -256,10 +354,12 @@ async function renderStudentPage() {
                 ${slide.image
             ? `
                             <div class="student-question-image">
+
                                 <img
                                     src="${slide.image}"
                                     alt=""
                                 />
+
                             </div>
                         `
             : ""
@@ -268,11 +368,9 @@ async function renderStudentPage() {
 
                 ${currentAnswer
             ? renderSubmittedState(
-                slide,
                 currentAnswer
             )
             : renderAnswerForm(
-                slide,
                 savedName
             )
         }
@@ -290,11 +388,10 @@ async function renderStudentPage() {
 
 
 /* --------------------------------
-   Form
+   Answer form
 -------------------------------- */
 
 function renderAnswerForm(
-    slide,
     savedName = "",
     savedText = ""
 ) {
@@ -342,11 +439,10 @@ function renderAnswerForm(
 
 
 /* --------------------------------
-   Submitted
+   Submitted state
 -------------------------------- */
 
 function renderSubmittedState(
-    slide,
     answer
 ) {
 
@@ -357,9 +453,11 @@ function renderSubmittedState(
                 답변이 제출되었습니다.
             </div>
 
+
             <div class="submitted-answer">
                 ${escapeHTML(answer.answer)}
             </div>
+
 
             <button
                 id="edit-answer-button"
@@ -404,7 +502,7 @@ function bindStudentEvents(slide) {
                         .trim();
 
 
-                const text =
+                const answer =
                     document
                         .getElementById(
                             "student-answer"
@@ -415,21 +513,10 @@ function bindStudentEvents(slide) {
 
                 if (
                     !name ||
-                    !text
+                    !answer
                 ) {
                     return;
                 }
-
-
-                /*
-                    학생 이름은
-                    이 브라우저에 기억
-                */
-
-                localStorage.setItem(
-                    "lectureStudentName",
-                    name
-                );
 
 
                 try {
@@ -437,20 +524,43 @@ function bindStudentEvents(slide) {
                     await submitAnswer(
                         slide.id,
                         name,
-                        text
+                        answer
                     );
 
 
                     /*
-                        서버에서 다시 읽어서
-                        최종 상태 표시
+                        이름 기억
                     */
+
+                    saveStudentName(
+                        name
+                    );
+
+
+                    /*
+                        본인이 제출한 답변도
+                        자기 브라우저에 기억
+                    */
+
+                    saveMyAnswer(
+                        slide.id,
+                        name,
+                        answer
+                    );
+
+
+                    currentAnswer = {
+                        name,
+                        answer
+                    };
+
 
                     await renderStudentPage();
 
                 } catch (error) {
 
                     console.error(error);
+
 
                     alert(
                         "답변 제출에 실패했습니다. 다시 시도해 주세요."
@@ -477,13 +587,13 @@ function bindStudentEvents(slide) {
             () => {
 
                 const savedName =
-                    localStorage.getItem(
-                        "lectureStudentName"
-                    ) || "";
+                    currentAnswer?.name ||
+                    getStudentName();
 
 
                 const savedText =
-                    currentAnswer?.answer || "";
+                    currentAnswer?.answer ||
+                    "";
 
 
                 studentRoot.innerHTML = `
@@ -511,17 +621,19 @@ function bindStudentEvents(slide) {
                             ${slide.image
                         ? `
                                         <div class="student-question-image">
+
                                             <img
                                                 src="${slide.image}"
                                                 alt=""
                                             />
+
                                         </div>
                                     `
                         : ""
                     }
 
+
                             ${renderAnswerForm(
-                        slide,
                         savedName,
                         savedText
                     )}
@@ -550,16 +662,61 @@ function bindStudentEvents(slide) {
 
 async function pollStudent() {
 
+    /*
+        종료 상태를 한번 받았다면
+        이 페이지에서는 더 이상 polling 안 함
+    */
+
+    if (pollingStopped) {
+        return;
+    }
+
+
+    /*
+        브라우저가 백그라운드라면
+        서버 요청 안 함
+    */
+
+    if (document.hidden) {
+        return;
+    }
+
+
+    /*
+        이전 요청이 아직 진행 중이면
+        중복 호출 방지
+    */
+
     if (polling) {
         return;
     }
 
+
     polling = true;
+
 
     try {
 
         const state =
             await getLectureState();
+
+
+        /*
+            강의 종료
+        */
+
+        if (
+            state.status ===
+            "ended"
+        ) {
+
+            pollingStopped = true;
+
+            renderEndedPage();
+
+            return;
+        }
+
 
         const newIndex =
             Number(
@@ -568,8 +725,8 @@ async function pollStudent() {
 
 
         /*
-            질문/슬라이드가 바뀔 때만
-            학생 화면 변경
+            슬라이드가 바뀐 경우에만
+            학생 화면 다시 렌더링
         */
 
         if (
@@ -577,7 +734,9 @@ async function pollStudent() {
             lastStudentIndex
         ) {
 
-            await renderStudentPage();
+            await renderStudentPage(
+                state
+            );
 
         }
 
@@ -593,6 +752,7 @@ async function pollStudent() {
         polling = false;
 
     }
+
 }
 
 
@@ -600,10 +760,52 @@ async function pollStudent() {
    Start
 -------------------------------- */
 
-renderStudentPage();
+async function initStudent() {
+
+    let state;
 
 
-setInterval(
-    pollStudent,
-    500
-);
+    try {
+
+        state =
+            await getLectureState();
+
+    } catch (error) {
+
+        console.error(error);
+
+        return;
+    }
+
+
+    /*
+        처음 접속했는데 이미 종료 상태라면
+        종료 화면만 표시하고 polling 시작 안 함
+    */
+
+    if (
+        state.status ===
+        "ended"
+    ) {
+
+        pollingStopped = true;
+
+        renderEndedPage();
+
+        return;
+    }
+
+
+    await renderStudentPage(
+        state
+    );
+
+
+    setInterval(
+        pollStudent,
+        POLL_INTERVAL
+    );
+}
+
+
+initStudent();
