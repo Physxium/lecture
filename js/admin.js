@@ -35,6 +35,13 @@ if (
 
 
 /* --------------------------------
+   Polling interval
+-------------------------------- */
+
+const POLL_INTERVAL = 1000;
+
+
+/* --------------------------------
    Elements
 -------------------------------- */
 
@@ -53,8 +60,29 @@ const resetButton =
         "reset-answers-button"
     );
 
+const setLiveButton =
+    document.getElementById(
+        "set-live-button"
+    );
+
+const setEndedButton =
+    document.getElementById(
+        "set-ended-button"
+    );
+
+const lectureStatusText =
+    document.getElementById(
+        "lecture-status-text"
+    );
+
+
+/* --------------------------------
+   State
+-------------------------------- */
 
 let currentIndex = 0;
+
+let lectureStatus = "live";
 
 let polling = false;
 
@@ -90,6 +118,7 @@ async function getLectureState() {
             }
         );
 
+
     if (!response.ok) {
 
         throw new Error(
@@ -97,6 +126,7 @@ async function getLectureState() {
         );
 
     }
+
 
     return response.json();
 }
@@ -134,6 +164,43 @@ async function setLectureState(
 
     }
 
+
+    return response.json();
+}
+
+
+async function setLectureStatus(
+    status
+) {
+
+    const response =
+        await fetch(
+            "/api/state",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        status
+                    })
+            }
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Failed to update lecture status"
+        );
+
+    }
+
+
     return response.json();
 }
 
@@ -150,6 +217,7 @@ async function getQuestionAnswers(
             }
         );
 
+
     if (!response.ok) {
 
         throw new Error(
@@ -157,6 +225,7 @@ async function getQuestionAnswers(
         );
 
     }
+
 
     return response.json();
 }
@@ -195,6 +264,7 @@ async function setAnswerPublic(
 
     }
 
+
     return response.json();
 }
 
@@ -218,7 +288,36 @@ async function resetAnswers() {
 
     }
 
+
     return response.json();
+}
+
+
+/* --------------------------------
+   Lecture status UI
+-------------------------------- */
+
+function updateLectureStatusUI() {
+
+    const isLive =
+        lectureStatus === "live";
+
+
+    setLiveButton.classList.toggle(
+        "active",
+        isLive
+    );
+
+    setEndedButton.classList.toggle(
+        "active",
+        !isLive
+    );
+
+
+    lectureStatusText.textContent =
+        isLive
+            ? "현재 강의 상태: LIVE"
+            : "현재 강의 상태: 종료";
 }
 
 
@@ -264,17 +363,28 @@ function renderSlideList() {
 
                     try {
 
-                        await setLectureState(
-                            index
-                        );
+                        const result =
+                            await setLectureState(
+                                index
+                            );
 
 
                         currentIndex =
-                            index;
+                            Number(
+                                result.currentSlide ??
+                                index
+                            );
+
+                        lectureStatus =
+                            result.status ??
+                            lectureStatus;
 
                         lastAnswerState = "";
 
+
                         updateActiveSlide();
+
+                        updateLectureStatusUI();
 
                         await renderAnswers();
 
@@ -321,13 +431,11 @@ function updateActiveSlide() {
 
             button.classList.toggle(
                 "active",
-                index ===
-                currentIndex
+                index === currentIndex
             );
 
         }
     );
-
 }
 
 
@@ -345,8 +453,7 @@ async function renderAnswers() {
 
     if (
         !slide ||
-        slide.type !==
-        "question"
+        slide.type !== "question"
     ) {
 
         answerList.innerHTML = `
@@ -415,11 +522,15 @@ async function renderAnswers() {
                     >
 
                         <strong>
-                            ${escapeHTML(answer.name)}
+                            ${escapeHTML(
+                        answer.name
+                    )}
                         </strong>
 
                         <span>
-                            ${escapeHTML(answer.answer)}
+                            ${escapeHTML(
+                        answer.answer
+                    )}
                         </span>
 
                         <small>
@@ -491,8 +602,88 @@ async function renderAnswers() {
 
             }
         );
-
 }
+
+
+/* --------------------------------
+   Lecture status buttons
+-------------------------------- */
+
+setLiveButton.addEventListener(
+    "click",
+    async () => {
+
+        try {
+
+            const result =
+                await setLectureStatus(
+                    "live"
+                );
+
+
+            lectureStatus =
+                result.status ??
+                "live";
+
+
+            updateLectureStatusUI();
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert(
+                "강의 상태 변경에 실패했습니다."
+            );
+
+        }
+
+    }
+);
+
+
+setEndedButton.addEventListener(
+    "click",
+    async () => {
+
+        const confirmed =
+            confirm(
+                "강의를 종료 상태로 전환할까요?"
+            );
+
+
+        if (!confirmed) {
+            return;
+        }
+
+
+        try {
+
+            const result =
+                await setLectureStatus(
+                    "ended"
+                );
+
+
+            lectureStatus =
+                result.status ??
+                "ended";
+
+
+            updateLectureStatusUI();
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert(
+                "강의 상태 변경에 실패했습니다."
+            );
+
+        }
+
+    }
+);
 
 
 /* --------------------------------
@@ -542,18 +733,30 @@ resetButton.addEventListener(
 
 async function pollAdmin() {
 
+    /*
+        다른 탭 / 백그라운드에서는
+        polling 하지 않음
+    */
+
+    if (document.hidden) {
+        return;
+    }
+
+
+    /*
+        이전 요청이 아직 끝나지 않았다면
+        중복 요청 방지
+    */
+
     if (polling) {
         return;
     }
+
 
     polling = true;
 
 
     try {
-
-        /*
-            현재 슬라이드 확인
-        */
 
         const state =
             await getLectureState();
@@ -565,6 +768,32 @@ async function pollAdmin() {
             );
 
 
+        const newStatus =
+            state.status ??
+            "live";
+
+
+        /*
+            강의 상태 변경 확인
+        */
+
+        if (
+            newStatus !==
+            lectureStatus
+        ) {
+
+            lectureStatus =
+                newStatus;
+
+            updateLectureStatusUI();
+
+        }
+
+
+        /*
+            현재 슬라이드 변경 확인
+        */
+
         if (
             newIndex !==
             currentIndex
@@ -575,6 +804,7 @@ async function pollAdmin() {
 
             lastAnswerState = "";
 
+
             updateActiveSlide();
 
             await renderAnswers();
@@ -584,8 +814,8 @@ async function pollAdmin() {
 
 
         /*
-            질문일 때
-            새 답변이 들어왔는지 확인
+            현재 질문 슬라이드인 경우만
+            답변 변화 확인
         */
 
         const slide =
@@ -634,7 +864,6 @@ async function pollAdmin() {
         polling = false;
 
     }
-
 }
 
 
@@ -655,23 +884,32 @@ async function initAdmin() {
                 state.currentSlide ?? 0
             );
 
+
+        lectureStatus =
+            state.status ??
+            "live";
+
     } catch (error) {
 
         console.error(error);
 
         currentIndex = 0;
 
+        lectureStatus = "live";
+
     }
 
 
     renderSlideList();
+
+    updateLectureStatusUI();
 
     await renderAnswers();
 
 
     setInterval(
         pollAdmin,
-        500
+        POLL_INTERVAL
     );
 }
 
