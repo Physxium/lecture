@@ -61,7 +61,7 @@ const contents = [
             {
                 subtitle: "그리고 머리 길이도 들쭉날쭉해진다",
                 image: "images/baldness3.png",
-                text: "날이 갈수록 각 머리카락의 길이는 천차만별이 되어간다. 수학적으로는, 머리 길이의 ‘분산이 증가한다.’"
+                text: "날이 갈수록 각 머리카락의 길이는 천차만별이 되어간다. 수학적으로는, 머리 길이의  분산이 증가한다."
             }
         ]
     },
@@ -186,8 +186,23 @@ const contents = [
 
         title: "얼음",
         subtitle: "물 위의 얼음이 녹으면 수위는 어떻게 될까?\n그렇다면 빙하가 녹으면 정말 해수면이 상승할까?",
-        image: null
+        image: ice_1
     },
+
+{
+        type: "presentation",
+
+        title: "물 위의 얼음이 녹으면?",
+        subtitle: "그런데 빙하가 녹으면 왜 해수면이 상승할까?",
+
+        paragraphs: [
+            "물의 부피 = 얼음이 물 속에 잠긴 부분의 부피",
+            "하지만 빙하는 바다 위에 둥둥 떠 있는 것 말고도, 대부분 육지 위에 있다. 그렇기에 지구온난화는 해수면을 높이게 된다.",
+        ],
+
+        image: "images/ice_2.jpg"
+    },
+
     {
         type: "question",
         id: "q2",
@@ -196,6 +211,21 @@ const contents = [
         subtitle: "상어는 피 냄새를 맡는다는데, 피 냄새는 대체 뭘까?\n피에서 철 냄새가 난다면 왜 상어는 철로 된 배를 쫓지 않을까?",
         image: null
     },
+
+{
+        type: "presentation",
+
+        title: "피 냄새",
+        subtitle: "피 속에는 철분이 들어 있는것이 맞다. 하지만 피 냄새는 좀 더 복잡하다.",
+
+        paragraphs: [
+            "상어가 맡는 피 냄새는 피 속의 아미노산",
+            "사람이 느끼는 피 냄새는 아주 다양한 화학 성분들",
+        ],
+
+        image: null
+    },
+
     {
         type: "question",
         id: "q3",
