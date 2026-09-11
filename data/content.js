@@ -177,7 +177,7 @@ const contents = [
             "'강의 진행 중, 잠시만 기다려 주세요'\n가 나오면  성공",
         ],
 
-        image: "images/QR.jpg"
+        image: "images/QR.png"
     },
 
     {
@@ -186,7 +186,7 @@ const contents = [
 
         title: "얼음",
         subtitle: "물 위의 얼음이 녹으면 수위는 어떻게 될까?\n그렇다면 빙하가 녹으면 정말 해수면이 상승할까?",
-        image: ice_1
+        image: "images/ice_1.jpg"
     },
 
 {
@@ -212,15 +212,15 @@ const contents = [
         image: null
     },
 
-{
+    {
         type: "presentation",
 
         title: "피 냄새",
         subtitle: "피 속에는 철분이 들어 있는것이 맞다. 하지만 피 냄새는 좀 더 복잡하다.",
 
         paragraphs: [
-            "상어가 맡는 피 냄새는 피 속의 아미노산",
-            "사람이 느끼는 피 냄새는 아주 다양한 화학 성분들",
+            "상어가 맡는 피 냄새는 피 속의 아미노산\n알라닌(Alanine), 글라이신(Glycine)",
+            "사람이 느끼는 피 냄새는 아주 다양한 화학 성분들\n1-옥텐-3-온(1-Octen-3-one)\nE2D (trans-4,5-epoxy-(E)-2-decenal)",
         ],
 
         image: null
@@ -234,12 +234,28 @@ const contents = [
         subtitle: "마이너스 칼로리도 있을까?",
         image: null
     },
+    
     {
         type: "question",
         id: "q4",
 
         title: "가장 좋은 제품은?",
         subtitle: "A: 평점 10 / 리뷰 5개\nB: 평점 8.7 / 리뷰 1,000개\nC: 평점 9 / 리뷰 50개",
+        image: null
+    },
+    {
+        type: "presentation",
+
+        title: "라플라스의 후속 규칙",
+        subtitle: "확률의 확률",
+
+        paragraphs: [
+            "A: 평점 10 / 리뷰 5개\nB: 평점 8.7 / 리뷰 1,000개\nC: 평점 9 / 리뷰 50개",
+            "사전 확률에 대한 정보가 없다면 반반으로 보고 분모에 2, 분자에 1을 더해보자.",
+            "A: (5+1)/(5+2) = 85.7%\nC: (870+1)/(1000+2) = 86.9%\nB: (45+1)/(50+2) = 88%",
+            
+        ],
+
         image: null
     },
 
@@ -250,6 +266,36 @@ const contents = [
         title: "로또",
         subtitle: "한번에 1등이 63명이 나올 수 있을까?\n로또가 조작된 건 아닐까?",
         image: null
+    },
+
+    {
+        type: "presentation",
+
+        title: "로또",
+        subtitle: "확률과 표준편차",
+
+        paragraphs: [
+            "로또의 경우의 수: 800만\n한 회당 팔리는 수: 8000만장\n당첨자 수의 평균: 10명",
+            "당첨자 수의 표준편차: 3.2",
+            "63명이면 평균보다 53명이나 많은데?",
+            "비밀은 사람들의 번호 선택 방식",
+        ],
+
+        image: "images/lotto.jpg"
+    },
+
+    {
+        type: "presentation",
+
+        title: "혹시 시간이 남는다면...",
+        subtitle: "당연한 것을 의심하기",
+
+        paragraphs: [
+            "궁금한 글이 있나요?",
+        
+        ],
+
+        image: "images/book_2.jpg"
     },
 
     
